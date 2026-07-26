@@ -1,0 +1,38 @@
+# Local install/test output
+.pi-test/
+tmp/
+logs/
+work/
+
+# Secrets
+auth.json
+config.json
+telegram.json
+*.env
+*.key
+*.pem
+*.p12
+
+# Runtime data
+data/
+sessions/
+memory/private/
+*.pid
+*.lock
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+

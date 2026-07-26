@@ -1,0 +1,15 @@
+{
+  "resonant": {
+    "version": "0.1.0",
+    "workspace": "$ALIGNED_AGENT_HOME/workspace",
+    "agent": "$ALIGNED_AGENT_HOME/agent",
+    "skills": "$ALIGNED_AGENT_HOME/agent/skills",
+    "principle": "minimal harness, maximum agent agency"
+  },
+  "packages": [
+    "extensions/internet.ts",
+    "extensions/desktop.ts",
+    "extensions/memory.ts"
+  ]
+}
+

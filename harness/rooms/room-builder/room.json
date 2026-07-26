@@ -1,0 +1,6 @@
+{
+  "name": "Room Builder",
+  "description": "Create personal Knowledge Rooms and compatible Living Library expansions through ordinary conversation.",
+  "version": "1.0",
+  "kind": "knowledge-room"
+}
