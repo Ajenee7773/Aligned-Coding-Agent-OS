@@ -56,6 +56,33 @@ test("coding protocol accepts fenced JSON but still extracts one action", async 
   );
 });
 
+test("coding tool actions require an observable prediction contract", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-prediction-");
+  const { AlignedCodingAgent, createProvider, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace);
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const agent = new AlignedCodingAgent({
+    config: runtimeConfig,
+    provider: createProvider(runtimeConfig),
+    tools,
+    journal,
+  });
+
+  assert.match(
+    agent.predictionGate({ action: "read_file", args: { path: "README.md" } }),
+    /expected.*verification/,
+  );
+  assert.equal(
+    agent.predictionGate({
+      action: "read_file",
+      expected: "The file content is returned.",
+      verification: "Inspect the content and hash.",
+      args: { path: "README.md" },
+    }),
+    null,
+  );
+});
+
 test("offline coding smoke completes every planned step", async (t) => {
   const workspace = tempDirectory(t, "aligned-code-smoke-");
   fs.writeFileSync(path.join(workspace, "README.md"), "# Fixture\n");
@@ -90,13 +117,28 @@ test("coding agent reads, edits, verifies, and reports runtime evidence", async 
       { id: "3", title: "Verify the result" },
     ] } },
     { action: "mark_step", args: { id: "1", status: "in_progress" } },
-    { action: "read_file", args: { path: "note.txt" } },
+    {
+      action: "read_file",
+      expected: "The file contains before.",
+      verification: "Inspect the returned content and sha256.",
+      args: { path: "note.txt" },
+    },
     { action: "mark_step", args: { id: "1", status: "completed" } },
     { action: "mark_step", args: { id: "2", status: "in_progress" } },
-    { action: "write_file", args: { path: "note.txt", content: "after\n" } },
+    {
+      action: "write_file",
+      expected: "note.txt contains after.",
+      verification: "Check the write receipt and subsequent command.",
+      args: { path: "note.txt", content: "after\n" },
+    },
     { action: "mark_step", args: { id: "2", status: "completed" } },
     { action: "mark_step", args: { id: "3", status: "in_progress" } },
-    { action: "run_command", args: { command: "node", args: ["verify.js"] } },
+    {
+      action: "run_command",
+      expected: "The verification process exits zero.",
+      verification: "Inspect the recorded exit code.",
+      args: { command: "node", args: ["verify.js"] },
+    },
     { action: "mark_step", args: { id: "3", status: "completed" } },
     { action: "final", summary: "Updated and verified the fixture." },
   ];
@@ -113,6 +155,90 @@ test("coding agent reads, edits, verifies, and reports runtime evidence", async 
   assert.equal(fs.readFileSync(path.join(workspace, "note.txt"), "utf8"), "after\n");
   assert.deepEqual(result.changedFiles, ["note.txt"]);
   assert.match(result.tests[0], /node verify\.js.*exit 0/);
+  assert.equal(result.evidence.receipts.length, 3);
+  assert.equal(result.evidence.receipts[2].expected, "The verification process exits zero.");
+});
+
+test("coding loop stops after three consecutive tool failures", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-no-progress-");
+  const { AlignedCodingAgent, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace);
+  const sequence = [
+    {
+      action: "plan",
+      args: {
+        goal: "Exercise bounded failure handling",
+        steps: [
+          { id: "1", title: "Attempt the tool" },
+          { id: "2", title: "Report the bounded result" },
+        ],
+      },
+    },
+    { action: "mark_step", args: { id: "1", status: "in_progress" } },
+    ...Array.from({ length: 3 }, () => ({
+      action: "missing_tool",
+      expected: "The tool returns a result.",
+      verification: "Inspect the tool receipt.",
+      args: {},
+    })),
+  ];
+  const provider = {
+    turn: 0,
+    async complete() {
+      return JSON.stringify(sequence[this.turn++]);
+    },
+  };
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const agent = new AlignedCodingAgent({ config: runtimeConfig, provider, tools, journal });
+  const result = await agent.runTask("Try a missing tool.", { includeHarness: false });
+
+  assert.equal(result.ok, false);
+  assert.match(result.summary, /3 consecutive tool failures/);
+  assert.equal(result.evidence.receipts.length, 3);
+  assert.equal(provider.turn, 5);
+});
+
+test("coding loop stops after three identical successful outcomes", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-identical-");
+  fs.writeFileSync(path.join(workspace, "README.md"), "# Stable\n");
+  const { AlignedCodingAgent, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace);
+  const repeatedAction = {
+    action: "read_file",
+    expected: "The unchanged file is returned.",
+    verification: "Compare the content and sha256.",
+    args: { path: "README.md" },
+  };
+  const sequence = [
+    {
+      action: "plan",
+      args: {
+        goal: "Exercise repeated-outcome handling",
+        steps: [
+          { id: "1", title: "Read the file" },
+          { id: "2", title: "Report the bounded result" },
+        ],
+      },
+    },
+    { action: "mark_step", args: { id: "1", status: "in_progress" } },
+    repeatedAction,
+    repeatedAction,
+    repeatedAction,
+  ];
+  const provider = {
+    turn: 0,
+    async complete() {
+      return JSON.stringify(sequence[this.turn++]);
+    },
+  };
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const agent = new AlignedCodingAgent({ config: runtimeConfig, provider, tools, journal });
+  const result = await agent.runTask("Repeat one read.", { includeHarness: false });
+
+  assert.equal(result.ok, false);
+  assert.match(result.summary, /3 identical action outcomes/);
+  assert.equal(result.evidence.receipts.length, 3);
+  assert.equal(provider.turn, 5);
 });
 
 test("command side effects in a git workspace enter the runtime evidence ledger", async (t) => {

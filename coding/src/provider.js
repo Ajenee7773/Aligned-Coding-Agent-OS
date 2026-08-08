@@ -312,6 +312,8 @@ export class MockProvider {
       {
         reason: 'The workspace status is the evidence needed for this smoke run.',
         action: 'workspace_status',
+        expected: 'The workspace root and current top-level state will be returned.',
+        verification: 'Confirm the tool result identifies the workspace and its files.',
         args: {},
       },
       {

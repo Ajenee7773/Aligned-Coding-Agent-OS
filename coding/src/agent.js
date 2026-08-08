@@ -8,6 +8,8 @@ const ACTIONS_REQUIRING_PLAN = new Set([
   'make_dir',
   'run_command',
 ]);
+const MAX_CONSECUTIVE_FAILURES = 3;
+const MAX_IDENTICAL_OUTCOMES = 3;
 
 function truncateForModel(value, max = 40000) {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
@@ -56,12 +58,14 @@ function buildSystemPrompt(config, tools, harnessPrompt) {
     '- Begin every coding task with a short plan. Make 2-8 observable steps.',
     '- Mark exactly one step in_progress before changing files or running commands.',
     '- Inspect before editing. Search instead of guessing. Preserve unknown user changes.',
+    '- Before every tool action, include "expected" (the observable result you predict) and "verification" (how that result will be checked). These are concise execution fields, not private chain-of-thought.',
     '- Existing files must be read before full overwrite; sha256 preconditions protect concurrent work.',
     '- Make the smallest coherent change that fully handles the task.',
     '- Use structured write tools for source edits. Commands are for project tools, builds, tests, and workflows whose side effects you understand.',
     '- After edits, run the narrowest meaningful verification. A successful command is required before final.',
     '- Complete or skip every plan step before final. Never claim a file or test the runtime did not observe.',
     '- Tool failures are evidence. Diagnose them, adjust the plan, and continue when possible.',
+    '- Stop after three consecutive tool failures or three identical action outcomes. Do not burn turns repeating a move that produces no new evidence.',
     '- Use request_approval when operator judgment is genuinely needed for direction, scope, cost, or irreversible impact.',
     '- Approval is a coordination channel, not a substitute for technical judgment.',
     '- Store durable coding judgment or continuity in the coding room only when it will matter after this run.',
@@ -107,7 +111,7 @@ function buildSystemPrompt(config, tools, harnessPrompt) {
     'Examples:',
     '{"reason":"I need an evidence-based work order first.","action":"plan","args":{"goal":"Repair the failing workflow","steps":[{"id":"1","title":"Inspect the failure and relevant code"},{"id":"2","title":"Implement the smallest fix"},{"id":"3","title":"Run the focused checks"}]}}',
     '{"reason":"I am beginning repository inspection.","action":"mark_step","args":{"id":"1","status":"in_progress","note":"Inspecting status and source files."}}',
-    '{"reason":"I need the current file and its hash before editing.","action":"read_file","args":{"path":"src/index.js"}}',
+    '{"reason":"I need the current file and its hash before editing.","action":"read_file","expected":"The current source and sha256 will be returned.","verification":"Check that the tool result contains content and sha256.","args":{"path":"src/index.js"}}',
     '{"reason":"The implementation and verification are complete.","action":"final","summary":"Fixed the workflow and verified it.","changedFiles":["src/index.js"],"tests":["npm test"],"notes":[]}',
   ];
 
@@ -133,6 +137,10 @@ export class AlignedCodingAgent {
     this.lastMutationTurn = 0;
     this.lastSuccessfulVerificationTurn = 0;
     this.protocolCorrections = 0;
+    this.consecutiveToolFailures = 0;
+    this.identicalOutcomeCount = 0;
+    this.lastOutcomeFingerprint = '';
+    this.executionReceipts = [];
   }
 
   publish(type, payload = {}) {
@@ -166,6 +174,15 @@ export class AlignedCodingAgent {
     const active = this.plan.steps.filter((step) => step.status === 'in_progress');
     if (active.length !== 1) {
       return `Mark exactly one plan step in_progress before ${action.action}.`;
+    }
+    return null;
+  }
+
+  predictionGate(action) {
+    const expected = String(action.expected ?? '').trim();
+    const verification = String(action.verification ?? '').trim();
+    if (!expected || !verification) {
+      return `Before ${action.action}, include concise string fields "expected" and "verification".`;
     }
     return null;
   }
@@ -299,6 +316,12 @@ export class AlignedCodingAgent {
         continue;
       }
 
+      const predictionGate = this.predictionGate(action);
+      if (predictionGate) {
+        this.correction(messages, predictionGate, { action: action.action });
+        continue;
+      }
+
       emitSignal(this.config, 'tool_started', {
         turn,
         action: action.action,
@@ -330,6 +353,36 @@ export class AlignedCodingAgent {
         this.lastSuccessfulVerificationTurn = turn;
       }
 
+      const outcomeFingerprint = JSON.stringify({
+        action: action.action,
+        args: action.args ?? {},
+        ok: result.ok,
+        result: result.ok ? result.result : result.error,
+      });
+      if (result.ok) this.consecutiveToolFailures = 0;
+      else this.consecutiveToolFailures += 1;
+      if (outcomeFingerprint === this.lastOutcomeFingerprint) {
+        this.identicalOutcomeCount += 1;
+      } else {
+        this.identicalOutcomeCount = 1;
+        this.lastOutcomeFingerprint = outcomeFingerprint;
+      }
+      const receipt = {
+        turn,
+        action: action.action,
+        expected: String(action.expected),
+        verification: String(action.verification),
+        observed: result.ok
+          ? truncateForModel(result.result, 4000)
+          : String(result.error || 'Tool action failed.'),
+        ok: result.ok,
+        consecutiveToolFailures: this.consecutiveToolFailures,
+        identicalOutcomeCount: this.identicalOutcomeCount,
+      };
+      this.executionReceipts.push(receipt);
+      await this.journal?.append('workflow.receipt', receipt);
+      this.publish('workflow_receipt', receipt);
+
       emitSignal(this.config, 'tool_finished', {
         turn,
         action: action.action,
@@ -341,6 +394,23 @@ export class AlignedCodingAgent {
         ok: result.ok,
         result: result.ok ? result.result : { error: result.error },
       });
+
+      if (
+        this.consecutiveToolFailures >= MAX_CONSECUTIVE_FAILURES ||
+        this.identicalOutcomeCount >= MAX_IDENTICAL_OUTCOMES
+      ) {
+        const cause = this.consecutiveToolFailures >= MAX_CONSECUTIVE_FAILURES
+          ? `${MAX_CONSECUTIVE_FAILURES} consecutive tool failures`
+          : `${MAX_IDENTICAL_OUTCOMES} identical action outcomes`;
+        const stopped = this.failedResult(
+          `Stopped after ${cause}.`,
+          'The execution loop halted instead of spending more turns without new evidence.',
+        );
+        await this.journal?.append('task.no_progress', stopped);
+        emitSignal(this.config, 'task_stopped', stopped);
+        this.publish('task_stopped', stopped);
+        return stopped;
+      }
 
       messages.push({
         role: 'user',
@@ -453,6 +523,7 @@ export class AlignedCodingAgent {
       evidence: {
         verifications: evidence.verifications,
         protocolCorrections: this.protocolCorrections,
+        receipts: [...this.executionReceipts],
       },
     };
     await this.journal?.append('task.final', result);
@@ -471,6 +542,11 @@ export class AlignedCodingAgent {
       tests: evidence.verifications.map(commandEvidence),
       notes: note ? [note] : [],
       plan: this.plan,
+      evidence: {
+        verifications: evidence.verifications,
+        protocolCorrections: this.protocolCorrections,
+        receipts: [...this.executionReceipts],
+      },
     };
   }
 
