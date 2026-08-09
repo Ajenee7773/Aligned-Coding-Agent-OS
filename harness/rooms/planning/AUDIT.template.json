@@ -1,0 +1,12 @@
+{
+  "schema": "aligned-long-horizon-audit/v1",
+  "task_id": "replace-me",
+  "round_id": "round-001",
+  "auditor": "replace-me",
+  "independent": true,
+  "read_only": true,
+  "verdict": "pending",
+  "evidence": [],
+  "failures": [],
+  "audited_at": null
+}

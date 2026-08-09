@@ -18,6 +18,7 @@ const DEFAULTS = {
   },
   agent: {
     maxTurns: 30,
+    longHorizonMode: 'auto',
     maxReadBytes: 120000,
     maxHarnessBytes: 120000,
     maxSourceLibraryBytes: 320000,
@@ -127,6 +128,9 @@ export async function loadConfig({ cwd = process.cwd(), configPath = '', cli = {
   if (envMaxTurns) {
     config.agent.maxTurns = envMaxTurns;
   }
+  if (['auto', 'always', 'never'].includes(String(process.env.RCA_LONG_HORIZON_MODE || '').toLowerCase())) {
+    config.agent.longHorizonMode = process.env.RCA_LONG_HORIZON_MODE.toLowerCase();
+  }
 
   if (cli.baseUrl) {
     config.provider.baseUrl = cli.baseUrl;
@@ -165,7 +169,8 @@ export function publicConfig(config) {
     agent: {
       workspace: config.agent.workspace,
       harnessPath: config.agent.harnessPath,
-      maxTurns: config.agent.maxTurns
+      maxTurns: config.agent.maxTurns,
+      longHorizonMode: config.agent.longHorizonMode
     },
     mesh: config.mesh
   };

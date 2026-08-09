@@ -20,6 +20,15 @@ Do not use this room to create ceremony around tiny tasks. If the job is one obv
 
 This is not about looking busy. This is about not losing the thread.
 
+## Long-Horizon Work
+
+If a mission has five or more dependent steps, is expected to cross context
+windows, or requires independent verification, read `LONG-HORIZON.md` before
+acting. Create a bounded contract for one round, preserve only audited facts in
+task state, and do not mark the mission complete from the executor's report.
+
+Long-horizon mode is conditional. Do not add its overhead to a simple request.
+
 ---
 
 ## When The Operator Says
