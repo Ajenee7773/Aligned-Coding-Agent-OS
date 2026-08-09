@@ -13,7 +13,13 @@ test("buyer interface exposes stop, voice recovery, and health repair controls",
   const html = source("ui/public/index.html");
   const client = source("ui/public/app.js");
   const server = source("ui/server.js");
+  const styles = source("ui/public/style.css");
 
+  assert.match(html, /aligned-agent-avatar\.webp/);
+  assert.match(html, /class="presence-wordmark"/);
+  assert.match(html, /<strong>ALIGNED<\/strong>[\s\S]*<span>CODING AGENT OS<\/span>/);
+  assert.doesNotMatch(html, /class="eye"/);
+  assert.match(styles, /\.presence-wordmark/);
   assert.match(html, /id="stopGeneration"/);
   assert.match(html, /id="roomsView"/);
   assert.match(html, /id="roomCatalog"/);
