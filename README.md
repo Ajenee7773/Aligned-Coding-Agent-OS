@@ -38,6 +38,10 @@ while a changed file has not been followed by successful verification.
 - **Coding Room:** Persistent engineering judgment, operating model, working
   loop, and self-authored coding continuity.
 - **Private sessions:** Every coding run receives a durable local journal.
+- **Exact-session restart:** Every web conversation owns an isolated Pi session
+  directory. After a response, Coding Agent OS pins the exact model-native
+  session and reopens that file after restart instead of guessing from recent
+  activity.
 - **Provider choice:** Local OpenAI-compatible servers and Ollama, plus Gemini,
   OpenAI, OpenRouter, and Anthropic through buyer-owned credentials.
 - **Aligned interfaces:** Local chat, Knowledge Rooms, Living Libraries,

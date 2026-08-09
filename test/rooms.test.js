@@ -130,6 +130,26 @@ test("Communications Room teaches honest, extensible computer agency", () => {
   assert.match(capabilityProtocol, /body that can\s+learn new ways to work/);
 });
 
+test("Communications Room teaches exact Pi session continuity", () => {
+  const continuity = fs.readFileSync(
+    path.resolve(
+      __dirname,
+      "..",
+      "harness",
+      "rooms",
+      "communications",
+      "SESSION-CONTINUITY.md",
+    ),
+    "utf8",
+  );
+  assert.match(continuity, /Conversation transcript/);
+  assert.match(continuity, /Exact Pi session/);
+  assert.match(continuity, /External Brain/);
+  assert.match(continuity, /active-session\.json/);
+  assert.match(continuity, /get_state/);
+  assert.match(continuity, /--session <exact-file>/);
+});
+
 test("packaged catalog exposes the Coding Edition base rooms and hides system rooms", () => {
   const paths = {
     rooms: path.resolve(__dirname, "..", "harness", "rooms"),

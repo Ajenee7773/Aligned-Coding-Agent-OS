@@ -16,7 +16,10 @@ Edition archive:
    separate.
 10. Confirm no key appears in UI responses, logs, sessions, or the archive.
 11. Build the ZIP from a clean source state and install it in a disposable
-   directory before distribution.
+    directory before distribution.
+12. Confirm a coding conversation writes `active-session.json`, restarts with
+    the exact same Pi session ID, and retains its transcript, project context,
+    and External Brain without storing credentials in the pin.
 
 Do not release if the agent can claim success without runtime evidence, if an
 installer points to the general Agent OS repository, if secrets enter the
