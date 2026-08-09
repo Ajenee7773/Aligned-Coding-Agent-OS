@@ -2,7 +2,7 @@
   "name": "aligned-coding-agent-os",
   "version": "0.1.0-alpha.2",
   "private": true,
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "A local-first coding agent OS with an evidence-tracked plan, execution, verification loop and a private self-authoring harness.",
   "scripts": {
     "bootstrap": "node core/bootstrap.js",
