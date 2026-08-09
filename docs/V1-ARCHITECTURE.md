@@ -368,7 +368,7 @@ The following existing assets remain compatible future directions:
 
 - the RAOS agent registry can become a multi-agent supervisor;
 - Resonant Code Agent can become a Builder room or optional engine;
-- Resonant Mesh can become multi-computer orchestration;
+- Alignment Network connects complete, sovereign agent systems across computers;
 - specialized room packs can become Living Libraries.
 
 They remain outside the v1 process and data model until the single-agent experience satisfies every mandatory gate.

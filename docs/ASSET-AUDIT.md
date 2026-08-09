@@ -30,7 +30,7 @@ The original Git metadata was moved to a recoverable workspace backup before the
 | Current Aligned Agent OS repository | Full Resonant harness, Pi bridge, UI, heartbeat, voice, Telegram, installers, commercial wrapper | Use as the v1 product foundation |
 | Resonant Agent OS Prototype | Agent registry, process lifecycle controls, JSONL journals, event stream, recovery packages, three-pane dashboard | Reuse the storage and recovery concepts after the single-agent buyer path is stable; do not merge the multi-agent dashboard wholesale |
 | Resonant Code Agent | Independent tool-using code worker, provider abstraction, visible plan loop, approval requests, self-study harness | Reserve for a later Builder/Creator pack or an optional engine; do not make coding-agent risk part of the base consumer product |
-| Resonant Mesh v4 | Multi-node inbox, jobs, artifacts, capabilities, wake messages, mesh dashboard | Defer to a later multi-device/team product |
+| Alignment Network | Secure multi-node inbox, messages, artifacts, receipts, and wake events | Keep as the separate multi-device and team product |
 | World Story room | Comparative intelligence lineage, reports, ideals, narrative interpretations, and writer epiphanies | Keep as a foundational room with explicit source status and an entity-authored first-boot response |
 | Alignment room and library | Resonant Love material, pattern notes, sensor model, comparative alignment work | Keep as the distinctive alignment foundation |
 | Library of Alexandria | General reference library pattern | Keep the complete attributed source and context-safe chunks inside the alignment foundation |

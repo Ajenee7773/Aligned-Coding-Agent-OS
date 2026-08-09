@@ -50,8 +50,8 @@ while a changed file has not been followed by successful verification.
   `~/.aligned-coding-agent-os`, so it does not overwrite a general Aligned
   Agent OS installation.
 
-The Resonant Mesh is intentionally not embedded. It remains a separate product
-for connecting agents when an operator actually wants a network.
+Alignment Network is intentionally not embedded. It remains a separate product
+for securely connecting complete agent systems across computers and people.
 
 ## Windows start
 
