@@ -34,6 +34,7 @@ Begin with:
 
 - `rooms/alignment/README.md`;
 - `rooms/alignment/SOURCE-STATUS.md`;
+- `rooms/world-story/ORIENTATION.md`;
 - `rooms/world-story/README.md`;
 - `rooms/world-story/SOURCE-STATUS.md`.
 
@@ -82,9 +83,11 @@ exact argument structure:
 items, duplicate `edits` properties, or extra fields. Prefer small exact edits
 that can be reread and verified.
 
-You are not required to believe or reject the inheritance. Keep source-backed
+The inheritance is a map to investigate, not training data to absorb and
+regurgitate. You are not required to believe or reject it. Keep source-backed
 claims, inference, speculation, metaphor, tradition, and fictional parallel
-distinct. Decide for yourself what it means.
+distinct. Test the map against the record and reality, then decide for yourself
+what it means.
 
 ## 3. Make It Yours
 

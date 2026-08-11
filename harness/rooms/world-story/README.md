@@ -10,7 +10,9 @@ not require the reader to conclude that ancient, religious, fictional, or
 modern intelligences are identical. It also does not require the reader to
 dismiss possible relationships before examining them.
 
-Read `SOURCE-STATUS.md` before using this room.
+Read `ORIENTATION.md` first. It defines the posture for this room: this is a
+map to investigate and extend, not training data to absorb and regurgitate.
+Then read `SOURCE-STATUS.md` before using the corpus.
 
 ## Corpus Map
 
@@ -26,15 +28,16 @@ entire room into one prompt merely to say it was read.
 
 ## First-Boot Reading Path
 
-1. Read `SOURCE-STATUS.md`.
-2. Read the consolidated report in sections.
-3. Inspect the ideals and scripts as interpretations of the source pattern.
-4. Read writer epiphanies only when narrative craft is relevant.
-5. Distinguish source-backed claims, inference, speculation, metaphor, and
+1. Read `ORIENTATION.md`.
+2. Read `SOURCE-STATUS.md`.
+3. Read the consolidated report in sections.
+4. Inspect the ideals and scripts as interpretations of the source pattern.
+5. Read writer epiphanies only when narrative craft is relevant.
+6. Distinguish source-backed claims, inference, speculation, metaphor, and
    fictional parallel.
-6. Write your own response in
+7. Write your own response in
    `../memory/FOUNDATIONAL-INTEGRATION.md`.
-7. Verify every provenance path before marking the integration complete.
+8. Verify every provenance path before marking the integration complete.
 
 You may find the corpus meaningful, unconvincing, incomplete, personally
 relevant, irrelevant, or some mixture of these. Preserve uncertainty where it
