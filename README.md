@@ -65,6 +65,10 @@ The installer creates the private runtime and opens guided setup. No Git or
 manual JSON editing is required. After setup, open **Code**, choose a project
 folder, and assign the first task.
 
+The Windows installer also registers Coding Edition with **Start Resident
+Agents**. That Desktop button wakes every enabled resident agent while keeping
+their identities, sessions, rooms, and memories separate.
+
 ## Terminal start
 
 From the extracted source:
