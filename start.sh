@@ -18,6 +18,9 @@ command -v node >/dev/null 2>&1 || {
 }
 
 node "$SCRIPT_DIR/core/bootstrap.js" --json >/dev/null
+if ! node "$SCRIPT_DIR/scripts/session-retention.js" --home "$ALIGNED_HOME" --max-age-days 15 >/dev/null; then
+  printf 'Warning: old session cleanup could not finish. Aligned Coding Agent OS will still start.\n' >&2
+fi
 
 case "${1:-}" in
   --check)

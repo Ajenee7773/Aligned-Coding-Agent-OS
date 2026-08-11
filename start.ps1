@@ -48,6 +48,11 @@ if ($LASTEXITCODE -ne 0) {
   throw "Aligned Coding Agent OS could not initialize its private runtime."
 }
 
+& node (Join-Path $ScriptDir "scripts\session-retention.js") --home $AlignedHome --max-age-days 15 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  Write-Warning "Old session cleanup could not finish. Aligned Coding Agent OS will still start."
+}
+
 if ($Check) {
   $PiCommand = Resolve-PiCommand
   Write-Host "Aligned Coding Agent OS runtime is ready."
