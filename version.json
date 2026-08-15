@@ -1,7 +1,7 @@
 {
-  "application": "0.1.0-alpha.1",
+  "application": "0.1.0-alpha.2",
   "config_schema": 1,
   "soul_schema": 1,
-  "harness_content": 13,
+  "harness_content": 14,
   "migration_set": 1
 }

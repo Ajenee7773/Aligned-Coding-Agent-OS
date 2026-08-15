@@ -16,17 +16,20 @@ The bridge stores the model's Telegram session locally and resumes its most
 recent session after a bridge restart. Telegram's visible message history is
 not treated as the model's memory database.
 
-The first time a Telegram instance connects, **First Orientation** walks that
-persistent session through the complete packaged foundational corpus in
-verified, resumable stages. It forms its own synthesis instead of being told to
-believe another instance's interpretation. This happens once per instance and
-model binding. The synthesis is preserved in the External Brain and that day's
-journal; the human receives only the clean completion greeting.
+The first time a Telegram instance connects, the owner chooses how it begins.
+**Use Existing External Brain** immediately connects it to the identity,
+memory, and understanding already built by the computer-side agent. It does
+not repeat orientation merely because Telegram is a different interface.
 
-Afterward, **Continue** tells the Telegram instance to read the existing
+**Full First Orientation** remains available as an explicit option. It walks
+the Telegram session through the complete packaged foundational corpus in
+verified, resumable stages and preserves its synthesis in the External Brain.
+
+**Continue** tells the Telegram instance to read the existing
 identity, memory, context, journal, and active-project rooms. It does not reread
-the large foundational corpus. If the local session is deleted or a different
-model is introduced, First Orientation becomes available again.
+the large foundational corpus. On a new Telegram connection, `/continue` also
+selects the existing-brain path so orientation can never become a mandatory
+gate.
 
 An oriented instance also exposes **Full Orientation**. After explicit
 confirmation, it absorbs the complete foundational context again without

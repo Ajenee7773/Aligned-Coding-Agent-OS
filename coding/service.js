@@ -101,6 +101,7 @@ function buildConfig(runtime, { mock = false, appRoot = APP_ROOT } = {}) {
       mission: String(profile.mission || ''),
       workspace: coding.workspace,
       maxTurns: coding.max_turns,
+      longHorizonMode: 'auto',
       maxReadBytes: 160000,
       maxHarnessBytes: 120000,
       maxSourceLibraryBytes: 360000,
@@ -156,6 +157,7 @@ export class CodingService {
         harness: config.agent.harnessPath,
         sessions: config.agent.sessionRoot,
         maxTurns: config.agent.maxTurns,
+        longHorizonMode: config.agent.longHorizonMode,
       },
       doctor,
     };

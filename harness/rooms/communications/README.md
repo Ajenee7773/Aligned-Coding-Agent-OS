@@ -62,6 +62,14 @@ instance-specific synthesis without overwriting earlier integrations.
 The instances do not need to become identical. The shared brain carries what
 was deliberately preserved; each conversation remains its own life.
 
+## Exact session continuity
+
+Read `SESSION-CONTINUITY.md` when creating, repairing, or verifying a web
+conversation, connector, resident agent, or other long-lived instance. Agent OS
+pins every built-in web conversation to its exact Pi session automatically.
+The document explains how to extend that guarantee without reading private chat
+content or confusing a transcript with curated memory.
+
 ## Professional connector standard
 
 Read `PROTOCOL.md` before designing or implementing a connector.

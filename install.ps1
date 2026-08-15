@@ -256,10 +256,19 @@ $BatchLauncher |
 $BatchLauncher |
   Set-Content -LiteralPath (Join-Path $AlignedHome "Start Aligned Coding Agent OS.bat") -Encoding ASCII
 
+$ResidentAgentsRoot = Join-Path $env:USERPROFILE "AlignedAI\ResidentAgents"
+Copy-Directory (Join-Path $ScriptDir "resident-agents") $ResidentAgentsRoot
+& (Join-Path $ResidentAgentsRoot "register-resident-agent.ps1") `
+  -Name "Aligned Coding Agent" `
+  -WindowsLauncher (Join-Path $AlignedHome "Start Aligned Coding Agent OS.bat") `
+  -Root $ResidentAgentsRoot `
+  -InstallDesktopStarter
+
 Write-Step ""
 Write-Step "Installation complete."
 Write-Step "Private data: $AlignedHome"
 Write-Step "Start: $AlignedHome\Start Aligned Coding Agent OS.bat"
+Write-Step "Start all resident agents: $ResidentAgentsRoot\Start Resident Agents.bat"
 Write-Step ""
 
 if ($env:ALIGNED_SKIP_START -ne "1") {

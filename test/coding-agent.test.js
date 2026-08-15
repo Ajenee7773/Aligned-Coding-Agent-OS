@@ -241,6 +241,117 @@ test("coding loop stops after three identical successful outcomes", async (t) =>
   assert.equal(provider.turn, 5);
 });
 
+test("long-horizon mode resets transient trajectory without losing task state", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-long-horizon-");
+  const { AlignedCodingAgent, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace, { maxTurns: 5, longHorizonMode: "auto" });
+  const messageCounts = [];
+  const sequence = [
+    {
+      action: "plan",
+      args: {
+        goal: "Exercise bounded long-horizon state",
+        steps: Array.from({ length: 5 }, (_, index) => ({
+          id: String(index + 1),
+          title: `Step ${index + 1}`,
+          acceptance: `Observable evidence for step ${index + 1}`,
+        })),
+      },
+    },
+    { action: "mark_step", args: { id: "1", status: "in_progress" } },
+    {
+      action: "workspace_status",
+      expected: "Workspace status is returned.",
+      verification: "Inspect the runtime tool receipt.",
+      args: {},
+    },
+    { action: "mark_step", args: { id: "1", status: "completed" } },
+    { action: "mark_step", args: { id: "2", status: "in_progress" } },
+  ];
+  const provider = {
+    turn: 0,
+    async complete(messages) {
+      messageCounts.push(messages.length);
+      return JSON.stringify(sequence[this.turn++]);
+    },
+  };
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const events = [];
+  const agent = new AlignedCodingAgent({
+    config: runtimeConfig,
+    provider,
+    tools,
+    journal,
+    eventHandler: (event) => events.push(event),
+  });
+  const result = await agent.runTask("Run a five-step fixture.", { includeHarness: false });
+  assert.equal(result.ok, false);
+  assert.equal(messageCounts[4], 3);
+  assert.equal(events.some((event) => event.type === "workflow_context_reset"), true);
+  assert.equal(agent.contextResetCount, 1);
+  assert.equal(agent.plan.goal, "Exercise bounded long-horizon state");
+  assert.equal(agent.executionReceipts[0].stepId, "1");
+});
+
+test("long-horizon plans require observable acceptance conditions", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-long-horizon-contract-");
+  const { AlignedCodingAgent, createProvider, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace, { longHorizonMode: "auto" });
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const agent = new AlignedCodingAgent({
+    config: runtimeConfig,
+    provider: createProvider(runtimeConfig),
+    tools,
+    journal,
+  });
+  const result = await agent.handleWorkflowAction({
+    action: "plan",
+    args: {
+      goal: "Reject an unverifiable long plan",
+      steps: Array.from({ length: 5 }, (_, index) => ({
+        id: String(index + 1),
+        title: `Step ${index + 1}`,
+      })),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /observable acceptance condition/i);
+});
+
+test("long-horizon steps cannot complete from an unsupported model claim", async (t) => {
+  const workspace = tempDirectory(t, "aligned-code-long-horizon-evidence-");
+  const { AlignedCodingAgent, createProvider, ToolRegistry } = await modules();
+  const runtimeConfig = config(workspace, { longHorizonMode: "always" });
+  const tools = new ToolRegistry(runtimeConfig, journal);
+  const agent = new AlignedCodingAgent({
+    config: runtimeConfig,
+    provider: createProvider(runtimeConfig),
+    tools,
+    journal,
+  });
+  await agent.handleWorkflowAction({
+    action: "plan",
+    args: {
+      goal: "Reject unsupported completion",
+      steps: [
+        { id: "1", title: "Inspect", acceptance: "A runtime receipt exists." },
+        { id: "2", title: "Report", acceptance: "The verified result is reported." },
+      ],
+    },
+  });
+  await agent.handleWorkflowAction({
+    action: "mark_step",
+    args: { id: "1", status: "in_progress" },
+  });
+  const result = await agent.handleWorkflowAction({
+    action: "mark_step",
+    args: { id: "1", status: "completed" },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /successful runtime receipt/i);
+  assert.equal(agent.plan.steps[0].status, "in_progress");
+});
+
 test("command side effects in a git workspace enter the runtime evidence ledger", async (t) => {
   if (spawnSync("git", ["--version"], { windowsHide: true }).status !== 0) {
     t.skip("git is not installed");

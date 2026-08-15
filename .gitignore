@@ -36,3 +36,6 @@ __pycache__/
 .venv/
 venv/
 
+# Local resident-agent registry
+resident-agents/resident-agents.json
+

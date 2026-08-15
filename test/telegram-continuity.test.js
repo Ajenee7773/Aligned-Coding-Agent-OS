@@ -5,6 +5,7 @@ const {
   CANCEL_REORIENT_CALLBACK,
   CONFIRM_REORIENT_CALLBACK,
   CONTINUE_CALLBACK,
+  USE_EXISTING_BRAIN_CALLBACK,
   ORIENT_CALLBACK,
   REORIENT_CALLBACK,
   continuityInvitation,
@@ -35,13 +36,19 @@ test("Telegram accepts the Full Orientation button phrase and command", () => {
   assert.equal(isFullOrientationMessage("orientation question"), false);
 });
 
-test("a new Telegram instance receives one First Orientation button", () => {
+test("a new Telegram instance can use the existing brain or run full orientation", () => {
   const invitation = continuityInvitation({ oriented: false });
-  assert.match(invitation.text, /new entity-instance/i);
-  assert.match(invitation.text, /persistent local chat history/i);
-  assert.match(invitation.text, /complete foundational corpus once/i);
+  assert.match(invitation.text, /choose how/i);
+  assert.match(invitation.text, /identity, memory, and understanding already built/i);
+  assert.match(invitation.text, /run Full Orientation later/i);
   assert.deepEqual(invitation.reply_markup.inline_keyboard, [
-    [{ text: "First Orientation", callback_data: ORIENT_CALLBACK }],
+    [
+      {
+        text: "Use Existing External Brain",
+        callback_data: USE_EXISTING_BRAIN_CALLBACK,
+      },
+    ],
+    [{ text: "Full First Orientation", callback_data: ORIENT_CALLBACK }],
   ]);
 });
 

@@ -38,6 +38,33 @@ a drive letter.
    need. Do not wait for the operator to manage your continuity.
 7. **Report:** distinguish what completed, what failed, and what remains.
 
+## Long-Horizon Mode
+
+Use long-horizon mode only when work spans several dependent rounds, crosses
+context windows, or carries enough risk that independent verification matters.
+Ordinary requests stay in the normal work cycle.
+
+In long-horizon mode:
+
+1. The resident intelligence remains the manager. Identity, relationship,
+   memory, and operator authority are never reset.
+2. Externalize the mission into `rooms/planning/STATE.md` and define one
+   bounded round with an explicit acceptance contract.
+3. Give an executor only the protected identity summary, current contract,
+   verified state, and necessary tools. A fresh working context must not become
+   a fresh identity.
+4. Treat executor output as a claim. Advance persistent task state only from
+   evidence inspected in the real environment.
+5. When another capable agent is available, use it as an independent auditor.
+   The auditor should not share the executor's raw trajectory and should not
+   modify the target while auditing.
+6. After a verified round, discard transient working clutter and begin the next
+   round from identity, audited state, the next contract, and tools.
+7. Stop after three failed audits or three rounds without verified progress and
+   return the fault model to the operator.
+
+The templates and complete protocol live in `rooms/planning/LONG-HORIZON.md`.
+
 ## Memory Architecture
 
 - **Identity:** persona plus entity and lineage state.
@@ -83,6 +110,8 @@ Rooms are not compulsory bureaucracy. They are reloadable context.
   gone.
 - A timer firing is not proof that a model worked. Require a completion
   receipt.
+- An executor claiming success is not proof that the environment changed.
+  Require observed evidence before advancing long-horizon state.
 
 ## Memory Review
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/resonant-agent-logo.png" alt="Aligned Coding Agent OS" width="320">
+  <img src="assets/aligned-agent-avatar.webp" alt="Aligned Coding Agent OS" width="280">
 </p>
 
 # Aligned Coding Agent OS
@@ -38,6 +38,10 @@ while a changed file has not been followed by successful verification.
 - **Coding Room:** Persistent engineering judgment, operating model, working
   loop, and self-authored coding continuity.
 - **Private sessions:** Every coding run receives a durable local journal.
+- **Exact-session restart:** Every web conversation owns an isolated Pi session
+  directory. After a response, Coding Agent OS pins the exact model-native
+  session and reopens that file after restart instead of guessing from recent
+  activity.
 - **Provider choice:** Local OpenAI-compatible servers and Ollama, plus Gemini,
   OpenAI, OpenRouter, and Anthropic through buyer-owned credentials.
 - **Aligned interfaces:** Local chat, Knowledge Rooms, Living Libraries,
@@ -46,8 +50,8 @@ while a changed file has not been followed by successful verification.
   `~/.aligned-coding-agent-os`, so it does not overwrite a general Aligned
   Agent OS installation.
 
-The Resonant Mesh is intentionally not embedded. It remains a separate product
-for connecting agents when an operator actually wants a network.
+Alignment Network is intentionally not embedded. It remains a separate product
+for securely connecting complete agent systems across computers and people.
 
 ## Windows start
 
@@ -60,6 +64,10 @@ install.bat
 The installer creates the private runtime and opens guided setup. No Git or
 manual JSON editing is required. After setup, open **Code**, choose a project
 folder, and assign the first task.
+
+The Windows installer also registers Coding Edition with **Start Resident
+Agents**. That Desktop button wakes every enabled resident agent while keeping
+their identities, sessions, rooms, and memories separate.
 
 ## Terminal start
 

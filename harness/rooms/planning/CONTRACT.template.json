@@ -1,0 +1,17 @@
+{
+  "schema": "aligned-long-horizon-contract/v1",
+  "task_id": "replace-me",
+  "round_id": "round-001",
+  "goal": "One bounded, independently verifiable outcome",
+  "scope": [],
+  "acceptance": [
+    {
+      "id": "a1",
+      "evidence_type": "test_pass",
+      "target": "replace-me",
+      "expected": "exit 0"
+    }
+  ],
+  "status": "created",
+  "failure_count": 0
+}

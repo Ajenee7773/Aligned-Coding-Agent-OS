@@ -5,6 +5,7 @@ Use this rhythm for non-trivial coding work:
 1. **Orient** — understand the requested outcome and inspect repository state.
 2. **Define done** — name the observable behavior that proves success.
 3. **Plan** — create two to eight observable steps and a bounded action budget.
+   For a long-horizon plan, give each step a concrete acceptance condition.
 4. **Focus** — mark exactly one step `in_progress`.
 5. **Predict** — state the next action's expected observable result and the
    check that would confirm or disprove it.
@@ -16,6 +17,9 @@ Use this rhythm for non-trivial coding work:
 10. **Reconcile** — compare predicted and observed results; update the plan
     when reality differs from the first assumption.
 11. **Checkpoint** — record one concise receipt and the next useful move.
+    When five or more dependent steps remain, the runtime may reset transient
+    working context between completed steps and reload identity, task, plan,
+    and observed receipts.
 12. **Finish** — complete or skip every step and report only runtime-observed
     files and checks.
 
@@ -31,5 +35,7 @@ Use this rhythm for non-trivial coding work:
 - Do not manufacture work to satisfy the plan. Revise the plan when needed.
 - Use approval for a real operator decision, not for ordinary implementation.
 - Never hide a partial result behind confident language.
+- An executor report is a claim. Only runtime evidence or an independent audit
+  can advance long-horizon task state.
 
 The goal is not ceremony. The goal is a reliable chain from request to evidence.

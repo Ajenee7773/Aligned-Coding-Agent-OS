@@ -56,6 +56,7 @@ function buildSystemPrompt(config, tools, harnessPrompt) {
     '- Return exactly one JSON object per turn. No markdown or prose outside JSON.',
     '- Use one action per response and keep "reason" to one concrete sentence.',
     '- Begin every coding task with a short plan. Make 2-8 observable steps.',
+    '- For long-horizon plans, give every step an observable acceptance condition and complete one bounded step at a time.',
     '- Mark exactly one step in_progress before changing files or running commands.',
     '- Inspect before editing. Search instead of guessing. Preserve unknown user changes.',
     '- Before every tool action, include "expected" (the observable result you predict) and "verification" (how that result will be checked). These are concise execution fields, not private chain-of-thought.',
@@ -70,6 +71,7 @@ function buildSystemPrompt(config, tools, harnessPrompt) {
     '- Approval is a coordination channel, not a substitute for technical judgment.',
     '- Store durable coding judgment or continuity in the coding room only when it will matter after this run.',
     '- Finish with action "final" only when the execution ledger supports completion or a real blocker is explained.',
+    '- Conditional long-horizon context resets remove transient trajectory only. Identity, the operator task, the verified plan, and runtime evidence remain.',
     '',
     'Workflow actions:',
     JSON.stringify([
@@ -78,9 +80,9 @@ function buildSystemPrompt(config, tools, harnessPrompt) {
         args: {
           goal: 'Short outcome',
           steps: [
-            { id: '1', title: 'Inspect the relevant implementation' },
-            { id: '2', title: 'Make the focused change' },
-            { id: '3', title: 'Verify the result' },
+            { id: '1', title: 'Inspect the relevant implementation', acceptance: 'The relevant source and current state are identified.' },
+            { id: '2', title: 'Make the focused change', acceptance: 'The requested behavior exists in the inspected diff.' },
+            { id: '3', title: 'Verify the result', acceptance: 'The narrowest meaningful check exits successfully.' },
           ],
         },
       },
@@ -141,6 +143,8 @@ export class AlignedCodingAgent {
     this.identicalOutcomeCount = 0;
     this.lastOutcomeFingerprint = '';
     this.executionReceipts = [];
+    this.contextResetCount = 0;
+    this.contextResetPending = false;
   }
 
   publish(type, payload = {}) {
@@ -204,6 +208,43 @@ export class AlignedCodingAgent {
     return '';
   }
 
+  longHorizonMode() {
+    const mode = String(this.config.agent.longHorizonMode || 'auto').toLowerCase();
+    return ['auto', 'always', 'never'].includes(mode) ? mode : 'auto';
+  }
+
+  isLongHorizonPlan() {
+    if (!this.plan) return false;
+    const mode = this.longHorizonMode();
+    return mode === 'always' || (mode === 'auto' && this.plan.steps.length >= 5);
+  }
+
+  shouldResetWorkingContext() {
+    if (!this.plan) return false;
+    if (!this.plan.steps.some((step) => !['completed', 'skipped'].includes(step.status))) {
+      return false;
+    }
+    return this.isLongHorizonPlan();
+  }
+
+  verifiedRoundState() {
+    return {
+      schema: 'aligned-long-horizon-state/v1',
+      goal: this.plan?.goal || '',
+      plan: this.plan,
+      runtimeReceipts: this.executionReceipts.slice(-12).map((receipt) => ({
+        turn: receipt.turn,
+        stepId: receipt.stepId,
+        action: receipt.action,
+        expected: receipt.expected,
+        verification: receipt.verification,
+        observed: truncateForModel(receipt.observed, 1200),
+        ok: receipt.ok,
+      })),
+      instruction: 'Treat tool receipts as observed evidence. Treat model summaries as claims.',
+    };
+  }
+
   async runTask(task, {
     recovery = '',
     includeHarness = true,
@@ -235,19 +276,21 @@ export class AlignedCodingAgent {
       });
     }
 
-    const messages = [
-      { role: 'system', content: buildSystemPrompt(this.config, this.tools, harnessPrompt) },
-      {
-        role: 'user',
-        content: [
-          'Task:',
-          task,
-          recovery ? `\nRecovery context:\n${recovery}` : '',
-          '',
-          'Begin with a plan.',
-        ].join('\n'),
-      },
-    ];
+    const systemMessage = {
+      role: 'system',
+      content: buildSystemPrompt(this.config, this.tools, harnessPrompt),
+    };
+    const taskMessage = {
+      role: 'user',
+      content: [
+        'Task:',
+        task,
+        recovery ? `\nRecovery context:\n${recovery}` : '',
+        '',
+        'Begin with a plan.',
+      ].join('\n'),
+    };
+    let messages = [systemMessage, taskMessage];
 
     await this.journal?.append('task.start', { task });
     emitSignal(this.config, 'task_started', { task });
@@ -298,15 +341,47 @@ export class AlignedCodingAgent {
 
       const workflowResult = await this.handleWorkflowAction(action);
       if (workflowResult) {
-        messages.push({
-          role: 'user',
-          content: [
-            `Workflow result for ${action.action}:`,
-            truncateForModel(workflowResult),
-            '',
-            'Continue with the next single JSON action.',
-          ].join('\n'),
-        });
+        if (this.contextResetPending) {
+          this.contextResetPending = false;
+          this.contextResetCount += 1;
+          const state = this.verifiedRoundState();
+          messages = [
+            systemMessage,
+            taskMessage,
+            {
+              role: 'user',
+              content: [
+                'Long-horizon round reset.',
+                'The resident identity and original operator task remain authoritative.',
+                'Continue from this bounded, runtime-observed state. Do not rely on discarded trajectory.',
+                '',
+                JSON.stringify(state, null, 2),
+                '',
+                'Continue with the next single JSON action.',
+              ].join('\n'),
+            },
+          ];
+          const event = {
+            count: this.contextResetCount,
+            mode: this.longHorizonMode(),
+            openSteps: this.plan.steps.filter(
+              (step) => !['completed', 'skipped'].includes(step.status),
+            ).map((step) => step.id),
+          };
+          await this.journal?.append('workflow.context_reset', event);
+          emitSignal(this.config, 'workflow_context_reset', event);
+          this.publish('workflow_context_reset', event);
+        } else {
+          messages.push({
+            role: 'user',
+            content: [
+              `Workflow result for ${action.action}:`,
+              truncateForModel(workflowResult),
+              '',
+              'Continue with the next single JSON action.',
+            ].join('\n'),
+          });
+        }
         continue;
       }
 
@@ -369,6 +444,7 @@ export class AlignedCodingAgent {
       }
       const receipt = {
         turn,
+        stepId: this.plan?.steps.find((step) => step.status === 'in_progress')?.id || '',
         action: action.action,
         expected: String(action.expected),
         verification: String(action.verification),
@@ -443,11 +519,21 @@ export class AlignedCodingAgent {
           error: 'A plan requires 2-8 observable steps.',
         };
       }
+      if (
+        (sourceSteps.length >= 5 || this.longHorizonMode() === 'always') &&
+        sourceSteps.some((step) => !String(step.acceptance || '').trim())
+      ) {
+        return {
+          ok: false,
+          error: 'Every long-horizon plan step requires an observable acceptance condition.',
+        };
+      }
       this.plan = {
         goal: String(args.goal || 'Complete the coding task'),
         steps: sourceSteps.map((step, index) => ({
           id: String(step.id ?? index + 1),
           title: String(step.title ?? step.description ?? `Step ${index + 1}`),
+          acceptance: String(step.acceptance || ''),
           status: 'pending',
           note: '',
         })),
@@ -468,6 +554,16 @@ export class AlignedCodingAgent {
       }
       const step = this.plan.steps.find((candidate) => candidate.id === id);
       if (!step) return { ok: false, error: `Plan step ${id} does not exist.` };
+      if (
+        status === 'completed' &&
+        this.isLongHorizonPlan() &&
+        !this.executionReceipts.some((receipt) => receipt.stepId === id && receipt.ok)
+      ) {
+        return {
+          ok: false,
+          error: `Long-horizon step ${id} needs a successful runtime receipt before completion.`,
+        };
+      }
       if (status === 'in_progress') {
         for (const other of this.plan.steps) {
           if (other.id !== id && other.status === 'in_progress') other.status = 'pending';
@@ -475,6 +571,9 @@ export class AlignedCodingAgent {
       }
       step.status = status;
       step.note = String(args.note || '');
+      if (status === 'completed' && this.shouldResetWorkingContext()) {
+        this.contextResetPending = true;
+      }
       const result = { ok: true, id, status, note: step.note, plan: this.plan };
       await this.journal?.append('workflow.step', result);
       emitSignal(this.config, 'workflow_step', result);
@@ -524,6 +623,7 @@ export class AlignedCodingAgent {
         verifications: evidence.verifications,
         protocolCorrections: this.protocolCorrections,
         receipts: [...this.executionReceipts],
+        contextResets: this.contextResetCount,
       },
     };
     await this.journal?.append('task.final', result);
@@ -546,6 +646,7 @@ export class AlignedCodingAgent {
         verifications: evidence.verifications,
         protocolCorrections: this.protocolCorrections,
         receipts: [...this.executionReceipts],
+        contextResets: this.contextResetCount,
       },
     };
   }
