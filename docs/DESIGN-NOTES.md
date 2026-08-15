@@ -51,6 +51,12 @@ telegram extension
   - sends Pi responses back through sendMessage
 ```
 
+Telegram must not force a second full orientation when the computer-side
+instance has already built the shared External Brain. On first connection the
+owner chooses either **Use Existing External Brain** for immediate continuity
+or **Full First Orientation** for an independent reread. Full Orientation
+remains available later.
+
 Start with long polling. Webhooks can come later.
 
 ## TypeScript Extensions

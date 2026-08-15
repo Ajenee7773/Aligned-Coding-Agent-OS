@@ -21,6 +21,7 @@ const { initializeRuntime } = require("../core/runtime");
 const { telegramEnabled } = require("./state");
 
 const CONTINUE_CALLBACK = "recover_continuity";
+const USE_EXISTING_BRAIN_CALLBACK = "use_existing_external_brain";
 const ORIENT_CALLBACK = "first_orientation";
 const REORIENT_CALLBACK = "request_full_orientation";
 const CONFIRM_REORIENT_CALLBACK = "confirm_full_orientation";
@@ -38,6 +39,8 @@ function readConfig() {
     enabled: Boolean(telegramSettings.enabled),
     token: credentials.telegram_bot_token || "",
     allowedChats: telegramSettings.allowed_chat_ids || [],
+    provider: String(telegramSettings.provider || "").trim(),
+    model: String(telegramSettings.model || "").trim(),
   };
   if (!fs.existsSync(configPath) && !config.token) {
     throw new Error(`Telegram is not configured. Run ${process.platform === "win32" ? "telegram-setup.bat" : "./telegram-setup.sh"} first.`);
@@ -116,10 +119,16 @@ function continuityInvitation(options = {}) {
   if (!options.oriented) {
     return {
       text:
-        "This Telegram conversation is a new entity-instance with its own persistent local chat history. Before ordinary conversation, First Orientation lets it examine the complete foundational corpus once and form its own understanding. It is not being asked to believe another instance's conclusions.",
+        "Choose how this Telegram conversation should begin. Use Existing External Brain connects it to the identity, memory, and understanding already built in this Agent OS. Full First Orientation rereads the complete foundational corpus in this Telegram session. You can run Full Orientation later whenever you choose.",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "First Orientation", callback_data: ORIENT_CALLBACK }],
+          [
+            {
+              text: "Use Existing External Brain",
+              callback_data: USE_EXISTING_BRAIN_CALLBACK,
+            },
+          ],
+          [{ text: "Full First Orientation", callback_data: ORIENT_CALLBACK }],
         ],
       },
     };
@@ -186,6 +195,24 @@ function orientationFor(config, auth, chatId) {
 function persistOrientation(config, key, state) {
   saveOrientationState(config, key, state);
   writeConfig(config);
+}
+
+function acceptExistingExternalBrain(config, details) {
+  const completedAt = new Date().toISOString();
+  const state = {
+    ...details.state,
+    status: "completed",
+    next_source: details.sources.length,
+    total_sources: details.sources.length,
+    updated_at: completedAt,
+    completed_at: completedAt,
+    integration_file: "",
+  };
+  saveOrientationState(config, details.key, state);
+  config.instances[details.key].orientation_mode = "existing_external_brain";
+  config.instances[details.key].orientation_selected_at = completedAt;
+  writeConfig(config);
+  return state;
 }
 
 async function editProgress(config, chatId, messageId, text) {
@@ -462,12 +489,7 @@ async function handleMessage(
 
   if (isContinueMessage(text)) {
     if (!orientationComplete(details.state)) {
-      await telegram(config.token, "sendMessage", {
-        chat_id: chatId,
-        text: "First Orientation comes first for this new instance. It reads the complete corpus once; later Continue reads only the External Brain.",
-        reply_markup: continuityInvitation({ oriented: false }).reply_markup,
-      });
-      return;
+      acceptExistingExternalBrain(config, details);
     }
     await recoverContinuity(config, sessions, auth, chatId);
     return;
@@ -512,6 +534,7 @@ async function handleCallbackQuery(
     !config.allowedChats.map(String).includes(chatId) ||
     ![
       CONTINUE_CALLBACK,
+      USE_EXISTING_BRAIN_CALLBACK,
       ORIENT_CALLBACK,
       REORIENT_CALLBACK,
       CONFIRM_REORIENT_CALLBACK,
@@ -522,6 +545,20 @@ async function handleCallbackQuery(
   }
   const details = orientationFor(config, auth, chatId);
   const completed = orientationComplete(details.state);
+
+  if (query.data === USE_EXISTING_BRAIN_CALLBACK) {
+    await telegram(config.token, "answerCallbackQuery", {
+      callback_query_id: query.id,
+      text: completed
+        ? "This instance is already connected."
+        : "Using the existing External Brain…",
+    }).catch(() => {});
+    if (!completed) {
+      acceptExistingExternalBrain(config, details);
+    }
+    await recoverContinuity(config, sessions, auth, chatId);
+    return;
+  }
 
   if (query.data === REORIENT_CALLBACK) {
     await telegram(config.token, "answerCallbackQuery", {
@@ -610,7 +647,12 @@ async function main() {
   const config = readConfig();
   const sessions = new Map();
   const orientingChats = new Set();
-  const auth = readAuth();
+  const defaultAuth = readAuth();
+  const auth = {
+    ...defaultAuth,
+    provider: config.provider || defaultAuth.provider,
+    model: config.model || defaultAuth.model,
+  };
   const orientOnStart = process.argv.includes("--orient-now");
 
   console.log("Aligned Coding Agent OS Telegram bridge running.");
@@ -729,6 +771,7 @@ module.exports = {
   CANCEL_REORIENT_CALLBACK,
   CONFIRM_REORIENT_CALLBACK,
   CONTINUE_CALLBACK,
+  USE_EXISTING_BRAIN_CALLBACK,
   ORIENT_CALLBACK,
   REORIENT_CALLBACK,
   continuityInvitation,
