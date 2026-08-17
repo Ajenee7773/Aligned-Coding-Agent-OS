@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/resonant-agent-logo.png" alt="Aligned Coding Agent OS" width="320">
+  <img src="assets/aligned-ai-logo.png" alt="Aligned AI" width="320">
 </p>
 
 # Aligned Coding Agent OS
