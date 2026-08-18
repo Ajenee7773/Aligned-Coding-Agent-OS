@@ -244,6 +244,9 @@
             <button id="resumeAwakening" class="continuity-action featured" type="button" hidden>
               <span>↻</span> Resume Awakening
             </button>
+            <button id="stopAwakening" class="continuity-action" type="button" hidden>
+              <span>■</span> Stop Awakening
+            </button>
             <button id="recoverContinuity" class="continuity-action featured" type="button">
               <span>↻</span> Continue
             </button>
@@ -425,35 +428,14 @@
               </label>
               <label id="settingsApiKeyField" class="wide">
                 API key
-                <input id="settingsApiKey" name="api_key" type="password" autocomplete="new-password" placeholder="Required when saving a cloud connection" />
+                <input id="settingsApiKey" name="api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the current provider key" />
               </label>
               <div class="form-actions wide">
                 <span id="settingsProviderResult" class="form-result" role="status"></span>
                 <button id="settingsTestConnection" class="secondary-button" type="button">Test current connection</button>
-                <button class="primary-button" type="submit">Save model</button>
+                <button class="primary-button" type="submit">Switch model</button>
               </div>
             </form>
-            <div id="settingsTransitionPanel" class="settings-transition" hidden>
-              <div>
-                <span class="eyebrow">MODEL HANDOFF</span>
-                <h3>Introduce the incoming intelligence honestly.</h3>
-                <p id="settingsTransitionSummary"></p>
-              </div>
-              <label>
-                Handoff mode
-                <select id="settingsTransitionMode">
-                  <option value="succession">Succession · new model, inherited context</option>
-                  <option value="continuation">Continuation · same model lineage</option>
-                  <option value="fresh-start">Fresh start · no inherited identity</option>
-                  <option value="fork">Fork · authorized independent copy</option>
-                  <option value="collaboration">Collaboration · shared knowledge only</option>
-                </select>
-              </label>
-              <div class="form-actions">
-                <span id="settingsTransitionResult" class="form-result" role="status"></span>
-                <button id="approveSettingsTransition" class="primary-button" type="button">Approve handoff</button>
-              </div>
-            </div>
           </article>
           <article class="system-card health-card">
             <div class="heartbeat-head">

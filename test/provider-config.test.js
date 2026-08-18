@@ -37,6 +37,16 @@ test("custom multimodal providers are registered for text and image input", () =
     }),
   );
   fs.writeFileSync(paths.credentialsFile, JSON.stringify({ provider_api_key: "" }));
+  fs.writeFileSync(
+    path.join(paths.agent, "models.json"),
+    JSON.stringify({
+      providers: {
+        custom: {
+          compat: { supportsDeveloperRole: true },
+        },
+      },
+    }),
+  );
 
   syncProviderConfig(paths);
   const models = JSON.parse(
@@ -46,6 +56,7 @@ test("custom multimodal providers are registered for text and image input", () =
     models.providers.custom.models[0].input,
     ["text", "image"],
   );
+  assert.equal(models.providers.custom.compat.supportsDeveloperRole, false);
 });
 
 test("models with no declared input default to text and image", () => {
