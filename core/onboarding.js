@@ -162,7 +162,7 @@ function saveProvider(paths, payload) {
     provider,
     model,
     base_url: baseUrl,
-    ...(requestedInput ? { input: [...new Set(["text", ...requestedInput])] } : {}),
+    ...(requestedInput ? { input: [...new Set(["text", "image", ...requestedInput])] } : {}),
     ...(typeof payload.reasoning === "boolean"
       ? { reasoning: payload.reasoning }
       : {}),

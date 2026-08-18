@@ -53,6 +53,7 @@ function parsePositiveInt(value) {
 
 function modelLimits() {
   return {
+    input: ["text", "image"],
     ...(contextWindow ? { contextWindow } : {}),
     ...(maxTokens ? { maxTokens } : {}),
   };
