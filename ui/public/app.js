@@ -347,13 +347,43 @@ function renderConversationList(items) {
   const container = $("#conversationList");
   container.innerHTML = "";
   for (const item of items.slice(0, 8)) {
+    const row = document.createElement("div");
+    row.className = `conversation-row ${item.id === currentConversationId ? "active" : ""}`;
     const button = document.createElement("button");
     button.type = "button";
     button.className = `conversation-link ${item.id === currentConversationId ? "active" : ""}`;
     button.textContent = item.title || "New conversation";
     button.addEventListener("click", () => openConversation(item.id));
-    container.appendChild(button);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "conversation-delete";
+    remove.setAttribute("aria-label", `Delete ${item.title || "conversation"}`);
+    remove.title = "Delete conversation";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => deleteConversationFromUi(item));
+    row.append(button, remove);
+    container.appendChild(row);
   }
+}
+
+async function deleteConversationFromUi(conversation) {
+  const title = conversation.title || "New conversation";
+  if (!confirm(`Delete “${title}”? This removes this conversation from this computer.`)) return;
+
+  await api(`/api/v1/conversations/${encodeURIComponent(conversation.id)}`, {
+    method: "DELETE",
+  });
+
+  const remaining = await listConversationMetadata();
+  if (conversation.id !== currentConversationId) {
+    renderConversationList(remaining);
+    return;
+  }
+
+  currentConversationId = "";
+  messages = [];
+  if (remaining.length) await openConversation(remaining[0].id);
+  else await createNewConversation();
 }
 
 async function createNewConversation() {

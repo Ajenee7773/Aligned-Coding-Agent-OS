@@ -119,8 +119,12 @@ nav { display: flex; flex-direction: column; gap: 7px; }
 .nav-item:hover, .nav-item.active { color: var(--text); background: rgba(255,255,255,0.045); border-color: var(--line); }
 .nav-item.active span { color: var(--gold); }
 .conversation-list { display: flex; flex-direction: column; gap: 5px; min-height: 0; overflow: auto; }
-.conversation-link { width: 100%; min-height: 34px; padding: 7px 10px; overflow: hidden; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--quiet); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; font-size: 11px; }
+.conversation-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid transparent; border-radius: 7px; }
+.conversation-row:hover, .conversation-row.active { border-color: var(--line); background: rgba(255,255,255,.035); }
+.conversation-link { width: 100%; min-width: 0; min-height: 34px; padding: 7px 10px; overflow: hidden; border: 0; border-radius: 7px; background: transparent; color: var(--quiet); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; font-size: 11px; }
 .conversation-link:hover, .conversation-link.active { border-color: var(--line); background: rgba(255,255,255,.035); color: var(--text); }
+.conversation-delete { width: 30px; height: 30px; margin-right: 2px; border: 0; border-radius: 7px; background: transparent; color: var(--quiet); cursor: pointer; font-size: 18px; line-height: 1; }
+.conversation-delete:hover { background: rgba(255,96,96,.1); color: #ff9d9d; }
 .sidebar-spacer { flex: 1; }
 .sidebar-bottom-nav {
   padding-top: 12px;
