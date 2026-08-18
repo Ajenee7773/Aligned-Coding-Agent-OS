@@ -37,7 +37,7 @@ function modelDefinition(runtime) {
         .map((value) => String(value || "").trim().toLowerCase())
         .filter((value) => value === "text" || value === "image")
     : [];
-  const input = [...new Set(["text", ...declaredInput])];
+  const input = [...new Set(["text", "image", ...declaredInput])];
   return {
     name: String(runtime.model_name || runtime.model || "").trim(),
     reasoning: Boolean(runtime.reasoning),
