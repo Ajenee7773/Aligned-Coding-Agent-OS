@@ -126,6 +126,7 @@ const DEFAULT_HEARTBEAT_CONFIG = {
 let session = null;
 let sessionConversationId = "";
 let awakeningRunning = false;
+let awakeningCancelRequested = false;
 let fullOrientationRunning = false;
 let codingServicePromise = null;
 
@@ -699,16 +700,6 @@ async function handleChat(req, res) {
     );
     return;
   }
-  if (onboarding.pending_transition) {
-    sendApiError(
-      res,
-      409,
-      "MODEL_TRANSITION_REQUIRED",
-      "Approve the pending model introduction before continuing.",
-    );
-    return;
-  }
-
   let payload;
   try {
     payload = JSON.parse(await readBody(req, 44 * 1024 * 1024));
@@ -801,16 +792,6 @@ async function handleEnterRoom(req, res) {
     );
     return;
   }
-  if (onboarding.pending_transition) {
-    sendApiError(
-      res,
-      409,
-      "MODEL_TRANSITION_REQUIRED",
-      "Approve the pending model introduction before entering a Knowledge Room.",
-    );
-    return;
-  }
-
   let payload;
   try {
     payload = JSON.parse(await readBody(req));
@@ -860,12 +841,12 @@ async function handleEnterRoom(req, res) {
 
 async function handleExportLivingLibrary(req, res) {
   const onboarding = publicOnboardingState(runtime);
-  if (!onboarding.complete || onboarding.pending_transition) {
+  if (!onboarding.complete) {
     sendApiError(
       res,
       409,
       "LIBRARY_EXPORT_NOT_READY",
-      "Complete setup and approve the model introduction before exporting a room.",
+      "Complete setup before exporting a room.",
     );
     return;
   }
@@ -910,12 +891,12 @@ async function handleExportLivingLibrary(req, res) {
 
 async function handleInstallLivingLibrary(req, res) {
   const onboarding = publicOnboardingState(runtime);
-  if (!onboarding.complete || onboarding.pending_transition) {
+  if (!onboarding.complete) {
     sendApiError(
       res,
       409,
       "LIBRARY_INSTALL_NOT_READY",
-      "Complete setup and approve the model introduction before installing a Living Library.",
+      "Complete setup before installing a Living Library.",
     );
     return;
   }
@@ -956,12 +937,12 @@ async function handleInstallLivingLibrary(req, res) {
 
 async function handleRemoveLivingLibrary(req, res) {
   const onboarding = publicOnboardingState(runtime);
-  if (!onboarding.complete || onboarding.pending_transition) {
+  if (!onboarding.complete) {
     sendApiError(
       res,
       409,
       "LIBRARY_REMOVE_NOT_READY",
-      "Complete setup and approve the model introduction before removing a Living Library.",
+      "Complete setup before removing a Living Library.",
     );
     return;
   }
@@ -1006,12 +987,12 @@ async function handleRemoveLivingLibrary(req, res) {
 
 async function handleAwakening(req, res) {
   const onboarding = publicOnboardingState(runtime);
-  if (!onboarding.complete || onboarding.pending_transition) {
+  if (!onboarding.complete) {
     sendApiError(
       res,
       409,
       "AWAKENING_NOT_READY",
-      "Complete setup and approve the model introduction first.",
+      "Complete setup first.",
     );
     return;
   }
@@ -1066,6 +1047,7 @@ async function handleAwakening(req, res) {
   }
 
   awakeningRunning = true;
+  awakeningCancelRequested = false;
   setAwakeningPaused(false, "running");
   try {
     const replies = [];
@@ -1074,6 +1056,7 @@ async function handleAwakening(req, res) {
     const sourcesPerPass = 1;
 
     for (let pass = 1; pass <= 40; pass += 1) {
+      if (awakeningCancelRequested) break;
       const state = enforceFoundationalCheckpoint(runtime.paths);
       if (!state.required) break;
       if (
@@ -1187,6 +1170,7 @@ async function handleAwakening(req, res) {
           if (event.type === "notice") write(event);
         },
       });
+      if (awakeningCancelRequested) break;
       if (text.trim()) {
         replies.push(text);
       }
@@ -1246,10 +1230,23 @@ async function handleAwakening(req, res) {
       total: current.total,
     });
   } catch (error) {
-    write({ type: "error", error: error.message });
+    if (awakeningCancelRequested) {
+      const current = foundationalIntegrationState(runtime.paths);
+      write({
+        type: "done",
+        text: "",
+        awakening_status: current.status,
+        checked: current.checked,
+        total: current.total,
+        cancelled: true,
+      });
+    } else {
+      write({ type: "error", error: error.message });
+    }
   } finally {
     resetSession();
     awakeningRunning = false;
+    awakeningCancelRequested = false;
     const finalState = enforceFoundationalCheckpoint(runtime.paths);
     setAwakeningPaused(
       finalState.required,
@@ -1257,6 +1254,17 @@ async function handleAwakening(req, res) {
     );
     if (!res.writableEnded && !res.destroyed) res.end();
   }
+}
+
+function handleStopAwakening(req, res) {
+  if (!awakeningRunning) {
+    sendJson(res, 200, { ok: true, stopped: false });
+    return;
+  }
+  awakeningCancelRequested = true;
+  setAwakeningPaused(true, "stopped-by-operator");
+  resetSession();
+  sendJson(res, 200, { ok: true, stopped: true });
 }
 
 function webOrientationFile() {
@@ -1285,12 +1293,12 @@ function persistWebOrientation(details, state) {
 
 async function handleFullOrientation(req, res) {
   const onboarding = publicOnboardingState(runtime);
-  if (!onboarding.complete || onboarding.pending_transition) {
+  if (!onboarding.complete) {
     sendApiError(
       res,
       409,
       "ORIENTATION_NOT_READY",
-      "Complete setup and approve the model introduction first.",
+      "Complete setup first.",
     );
     return;
   }
@@ -1984,6 +1992,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/api/v1/awaken") {
     await handleAwakening(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/awaken/stop") {
+    handleStopAwakening(req, res);
     return;
   }
 

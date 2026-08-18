@@ -130,10 +130,20 @@ function saveProvider(paths, payload) {
   });
   const baseUrl = validateBaseUrl(payload.base_url, provider);
   const apiKey = String(payload.api_key || "").trim();
-  if (provider !== "ollama" && provider !== "custom" && !apiKey) {
+  const settings = readJson(paths.settingsFile);
+  const credentials = readJson(paths.credentialsFile, {
+    schema_version: 1,
+  });
+  const previousProvider = normalizeProvider(settings.runtime?.provider);
+  const savedApiKey =
+    provider === previousProvider
+      ? String(credentials.provider_api_key || "").trim()
+      : "";
+  const effectiveApiKey = apiKey || savedApiKey;
+  if (provider !== "ollama" && provider !== "custom" && !effectiveApiKey) {
     throw new Error("An API key is required for this provider.");
   }
-  if (provider === "custom" && !apiKey && !isLoopbackUrl(baseUrl)) {
+  if (provider === "custom" && !effectiveApiKey && !isLoopbackUrl(baseUrl)) {
     throw new Error(
       "A keyless OpenAI-compatible provider must run on this computer. Remote custom providers require an API key.",
     );
@@ -142,7 +152,6 @@ function saveProvider(paths, payload) {
     throw new Error("The API key is too long.");
   }
 
-  const settings = readJson(paths.settingsFile);
   const requestedInput = Array.isArray(payload.input)
     ? payload.input
         .map((value) => String(value || "").trim().toLowerCase())
@@ -168,10 +177,11 @@ function saveProvider(paths, payload) {
   };
   writeJson(paths.settingsFile, settings);
 
-  const credentials = readJson(paths.credentialsFile, {
-    schema_version: 1,
-  });
-  credentials.provider_api_key = apiKey;
+  if (apiKey) {
+    credentials.provider_api_key = apiKey;
+  } else if (provider !== previousProvider) {
+    credentials.provider_api_key = "";
+  }
   writeJson(paths.credentialsFile, credentials, { mode: 0o600 });
 
   const providerState = syncProviderConfig(paths);
