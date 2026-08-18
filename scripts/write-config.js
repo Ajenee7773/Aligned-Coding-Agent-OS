@@ -108,9 +108,9 @@ if (provider === "ollama") {
     api: existing.api || "openai-completions",
     apiKey: existing.apiKey || "ollama",
     compat: {
+      ...(existing.compat || {}),
       supportsDeveloperRole: false,
       supportsReasoningEffort: false,
-      ...(existing.compat || {}),
     },
     models: upsertModelEntry(existing.models, model, limits),
   };

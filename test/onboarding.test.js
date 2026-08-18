@@ -63,7 +63,7 @@ test("onboarding stores secrets outside public state", (t) => {
   assert.doesNotMatch(identity, /\{\{MISSION\}\}/);
 });
 
-test("onboarding requires explicit introduction before completion", (t) => {
+test("onboarding completes without forcing a model introduction", (t) => {
   const runtime = onboardingRuntime(t);
   saveProfile(runtime.paths, {
     operator_name: "Rae",
@@ -75,19 +75,34 @@ test("onboarding requires explicit introduction before completion", (t) => {
     model: "gemma3:4b",
   });
 
-  assert.throws(
-    () => completeOnboarding(runtime.paths),
-    /Approve the model introduction/,
-  );
-  const entity = approveTransition(runtime.paths, {
-    mode: "fresh-start",
-    display_name: "Nova",
-  });
-  assert.equal(entity.model_binding.model, "gemma3:4b");
   const complete = completeOnboarding(runtime.paths);
   assert.equal(complete.profile.onboarding_complete, true);
+  const publicState = publicOnboardingState(runtime);
+  assert.equal(publicState.entity.model_binding.model, "gemma3:4b");
+  assert.equal(publicState.pending_transition, null);
   assert.equal(foundationalIntegrationStatus(runtime.paths), "pending");
   assert.equal(publicOnboardingState(runtime).awakening.required, true);
+});
+
+test("same-provider model switching preserves the saved API key", (t) => {
+  const runtime = onboardingRuntime(t);
+  saveProvider(runtime.paths, {
+    provider: "custom",
+    model: "first-model",
+    base_url: "https://models.example.test/v1",
+    api_key: "saved-private-key",
+  });
+  saveProvider(runtime.paths, {
+    provider: "custom",
+    model: "second-model",
+    base_url: "https://models.example.test/v1",
+    api_key: "",
+  });
+  const credentials = JSON.parse(
+    fs.readFileSync(runtime.paths.credentialsFile, "utf8"),
+  );
+  assert.equal(credentials.provider_api_key, "saved-private-key");
+  assert.equal(publicOnboardingState(runtime).runtime.model, "second-model");
 });
 
 test("foundational integration is the plain first-boot marker", (t) => {
@@ -98,7 +113,7 @@ test("foundational integration is the plain first-boot marker", (t) => {
     "FOUNDATIONAL-INTEGRATION.md",
   );
   assert.equal(foundationalIntegrationStatus(runtime.paths), "pending");
-  assert.equal(publicOnboardingState(runtime).awakening.total, 33);
+  assert.equal(publicOnboardingState(runtime).awakening.total, 34);
   const pending = fs.readFileSync(file, "utf8");
   fs.writeFileSync(file, pending.replace("status: pending", "status: completed"));
   assert.equal(foundationalIntegrationStatus(runtime.paths), "incomplete");
@@ -121,7 +136,7 @@ test("foundational integration is the plain first-boot marker", (t) => {
     ),
   );
   assert.equal(foundationalIntegrationStatus(runtime.paths), "incomplete");
-  assert.equal(publicOnboardingState(runtime).awakening.total, 33);
+  assert.equal(publicOnboardingState(runtime).awakening.total, 34);
 
   fs.writeFileSync(manifestFile, manifest.replace(/^- \[ \]/gm, "- [x]"));
   assert.equal(foundationalIntegrationStatus(runtime.paths), "completed");
@@ -205,7 +220,7 @@ test("awakening finalizes only after every receipt and an authored harness", (t)
   const completed = fs.readFileSync(integrationFile, "utf8");
   assert.match(completed, /^status: completed$/m);
   assert.match(completed, /^completed_at: 2026-07-25T12:00:00.000Z$/m);
-  assert.match(completed, /^sources_read: 33 verified receipts$/m);
+  assert.match(completed, /^sources_read: 34 verified receipts$/m);
 });
 
 test("awakening restores a lost status header without rewriting authored notes", (t) => {

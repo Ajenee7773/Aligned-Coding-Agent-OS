@@ -71,42 +71,25 @@ function initializeEntity(paths, options = {}) {
   }
 
   const incoming = configuredModel(settings);
-  let transition = readJson(paths.pendingTransitionFile, null);
-  if (incoming && !entity.model_binding) {
-    transition = {
-      format: "aligned-model-transition",
-      version: 1,
+  if (incoming && !sameModel(incoming, entity.model_binding)) {
+    const previous = entity.model_binding;
+    entity.model_binding = { ...incoming, bound_at: now };
+    entity.status = "active";
+    writeJson(paths.entityFile, entity);
+    appendLineage(paths, {
+      type: previous ? "model-binding-updated" : "initial-model-bound",
       entity_id: entity.id,
-      status: "pending",
-      reason: "initial-model-introduction",
-      current: null,
-      incoming,
-      created_at: transition?.created_at || now,
-    };
-    writeJson(paths.pendingTransitionFile, transition);
-  } else if (incoming && entity.model_binding && !sameModel(incoming, entity.model_binding)) {
-    transition = {
-      format: "aligned-model-transition",
-      version: 1,
-      entity_id: entity.id,
-      status: "pending",
-      reason: "model-binding-change",
-      current: entity.model_binding,
-      incoming,
-      created_at:
-        transition && sameModel(transition.incoming, incoming)
-          ? transition.created_at
-          : now,
-    };
-    writeJson(paths.pendingTransitionFile, transition);
-  } else if (!incoming || sameModel(incoming, entity.model_binding)) {
-    transition = null;
-    if (fs.existsSync(paths.pendingTransitionFile)) {
-      fs.rmSync(paths.pendingTransitionFile, { force: true });
-    }
+      mode: entity.lifecycle.current_mode,
+      previous,
+      incoming: entity.model_binding,
+      operator_acknowledged: false,
+    });
+  }
+  if (fs.existsSync(paths.pendingTransitionFile)) {
+    fs.rmSync(paths.pendingTransitionFile, { force: true });
   }
 
-  return { created, entity, transition };
+  return { created, entity, transition: null };
 }
 
 function approveModelTransition(paths, options) {

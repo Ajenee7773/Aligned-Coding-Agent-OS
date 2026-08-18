@@ -20,7 +20,7 @@ function settings(provider, model) {
   return { runtime: { provider, model } };
 }
 
-test("a configured model waits for explicit initial introduction", (t) => {
+test("a configured model is immediately available without an introduction lock", (t) => {
   const paths = entityRuntime(t);
   const result = initializeEntity(paths, {
     profile: { agent_name: "Nova" },
@@ -29,25 +29,19 @@ test("a configured model waits for explicit initial introduction", (t) => {
   });
 
   assert.equal(result.entity.display_name, "Nova");
-  assert.equal(result.entity.model_binding, null);
-  assert.equal(result.transition.reason, "initial-model-introduction");
-  assert.deepEqual(result.transition.incoming, {
-    provider: "ollama",
-    model: "gemma3:4b",
-  });
+  assert.equal(result.entity.model_binding.provider, "ollama");
+  assert.equal(result.entity.model_binding.model, "gemma3:4b");
+  assert.equal(result.transition, null);
+  assert.equal(fs.existsSync(paths.pendingTransitionFile), false);
 });
 
-test("approving initial introduction binds the model and records lineage", (t) => {
+test("initial model binding records informational lineage", (t) => {
   const paths = entityRuntime(t);
   initializeEntity(paths, {
     profile: { agent_name: "Nova" },
     settings: settings("ollama", "gemma3:4b"),
   });
-  const entity = approveModelTransition(paths, {
-    mode: "fresh-start",
-    displayName: "Nova",
-  });
-
+  const entity = readJson(paths.entityFile);
   assert.equal(entity.status, "active");
   assert.equal(entity.model_binding.provider, "ollama");
   assert.equal(entity.model_binding.model, "gemma3:4b");
@@ -60,23 +54,27 @@ test("approving initial introduction binds the model and records lineage", (t) =
   assert.equal(events.at(-1).type, "initial-model-bound");
 });
 
-test("changing model creates a succession decision instead of silent replacement", (t) => {
+test("changing model updates the binding without blocking access", (t) => {
   const paths = entityRuntime(t);
   initializeEntity(paths, {
     profile: { agent_name: "Nova" },
     settings: settings("ollama", "gemma3:4b"),
   });
-  approveModelTransition(paths, { mode: "fresh-start" });
-
   const changed = initializeEntity(paths, {
     profile: { agent_name: "Nova" },
     settings: settings("google", "gemini-2.5-pro"),
   });
   const persisted = readJson(paths.entityFile);
 
-  assert.equal(persisted.model_binding.model, "gemma3:4b");
-  assert.equal(changed.transition.reason, "model-binding-change");
-  assert.equal(changed.transition.incoming.model, "gemini-2.5-pro");
+  assert.equal(persisted.model_binding.model, "gemini-2.5-pro");
+  assert.equal(changed.transition, null);
+  assert.equal(fs.existsSync(paths.pendingTransitionFile), false);
+  const events = fs
+    .readFileSync(paths.lineageFile, "utf8")
+    .trim()
+    .split(/\r?\n/)
+    .map(JSON.parse);
+  assert.equal(events.at(-1).type, "model-binding-updated");
 });
 
 test("unsupported lifecycle modes are rejected", (t) => {

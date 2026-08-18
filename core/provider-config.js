@@ -103,9 +103,9 @@ function syncProviderConfig(paths) {
       api: existing.api || "openai-completions",
       apiKey: existing.apiKey || "ollama",
       compat: {
+        ...(existing.compat || {}),
         supportsDeveloperRole: false,
         supportsReasoningEffort: false,
-        ...(existing.compat || {}),
       },
       models: upsertModel(existing.models, model, modelDefinition(runtime)),
     };
@@ -120,9 +120,9 @@ function syncProviderConfig(paths) {
           ? "local"
           : envVar,
       compat: {
+        ...(existing.compat || {}),
         supportsDeveloperRole: false,
         supportsReasoningEffort: false,
-        ...(existing.compat || {}),
       },
       models: upsertModel(
         existing.models,

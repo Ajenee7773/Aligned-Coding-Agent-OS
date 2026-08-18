@@ -209,7 +209,8 @@ test("provider settings compile into Pi configuration", (t) => {
   assert.equal(auth.provider, "ollama");
   assert.equal(auth.model, "gemma3:4b");
   assert.equal(models.providers.ollama.models[0].id, "gemma3:4b");
-  assert.equal(second.pendingTransition.reason, "initial-model-introduction");
+  assert.equal(second.pendingTransition, null);
+  assert.equal(second.entity.model_binding.model, "gemma3:4b");
 });
 
 test("OpenAI-compatible local models compile into a complete Pi provider", (t) => {

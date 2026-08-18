@@ -22,6 +22,7 @@ test("buyer interface exposes stop, voice recovery, and health repair controls",
   assert.match(html, /id="libraryFile"/);
   assert.match(html, /One click\. New context\. Same intelligence\./);
   assert.match(html, /id="resumeAwakening"/);
+  assert.match(html, /id="stopAwakening"/);
   assert.match(html, /id="fullOrientation"/);
   assert.match(html, /id="voiceStatus"[^>]*role="status"/);
   assert.match(
@@ -37,8 +38,8 @@ test("buyer interface exposes stop, voice recovery, and health repair controls",
   assert.match(html, /data-view="settings"[^>]*>[\s\S]*Settings/);
   assert.match(html, /id="settingsView"/);
   assert.match(html, /id="settingsProviderForm"/);
-  assert.match(html, /id="settingsTransitionPanel"/);
-  assert.match(html, /id="settingsTransitionMode"/);
+  assert.doesNotMatch(html, /id="settingsTransitionPanel"/);
+  assert.doesNotMatch(html, /id="settingsTransitionMode"/);
   assert.match(html, /id="heartbeatSettingsForm"/);
   assert.match(html, /id="heartbeatEvery"/);
   assert.match(html, /id="heartbeatPrompt"/);
@@ -48,7 +49,8 @@ test("buyer interface exposes stop, voice recovery, and health repair controls",
   assert.doesNotMatch(client, /loadHarnessScope/);
   assert.match(client, /renderSettingsModel/);
   assert.match(client, /settingsProviderForm/);
-  assert.match(client, /approveSettingsTransition/);
+  assert.doesNotMatch(client, /approveSettingsTransition/);
+  assert.match(client, /"\/api\/v1\/awaken\/stop"/);
   assert.match(client, /"\/api\/heartbeat\/configure"/);
   assert.match(client, /Microphone access was denied/);
   assert.match(client, /Text conversation still works/);

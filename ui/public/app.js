@@ -117,7 +117,8 @@ function updateSettingsProviderFields() {
   const custom = provider === "custom";
   $("#settingsApiKeyField").hidden = local;
   $("#settingsBaseUrlField").hidden = !local && !custom;
-  $("#settingsApiKey").required = !local && !custom;
+  $("#settingsApiKey").required =
+    !local && !custom && provider !== onboarding?.runtime?.provider;
   if (local && !$("#settingsBaseUrl").value) {
     $("#settingsBaseUrl").value = "http://localhost:11434/v1";
   }
@@ -126,7 +127,6 @@ function updateSettingsProviderFields() {
 function renderSettingsModel() {
   const runtime = onboarding?.runtime || {};
   const binding = onboarding?.entity?.model_binding || {};
-  const pending = onboarding?.pending_transition || null;
   $("#settingsCurrentModel").textContent =
     `Active · ${binding.provider || "unbound"} / ${binding.model || "unbound"}`;
   $("#settingsProvider").value = runtime.provider || binding.provider || "";
@@ -134,20 +134,6 @@ function renderSettingsModel() {
   $("#settingsBaseUrl").value = runtime.base_url || "";
   $("#settingsApiKey").value = "";
   updateSettingsProviderFields();
-
-  $("#settingsTransitionPanel").hidden = !pending;
-  if (!pending) {
-    $("#settingsTransitionSummary").textContent = "";
-    return;
-  }
-  const incoming = `${pending.incoming.provider} / ${pending.incoming.model}`;
-  const prior = pending.current
-    ? `${pending.current.provider} / ${pending.current.model}`
-    : "no previous model";
-  $("#settingsTransitionSummary").textContent =
-    `${incoming} is waiting to enter an environment previously bound to ${prior}.`;
-  $("#settingsTransitionMode").value =
-    pending.reason === "model-binding-change" ? "succession" : "fresh-start";
 }
 
 function renderSetup() {
@@ -276,7 +262,7 @@ $("#providerForm").addEventListener("submit", async (event) => {
   setResult("#providerResult", "Saving securely…");
   try {
     await submitJson("/api/v1/onboarding/provider", formPayload(event.currentTarget));
-    setResult("#providerResult", "Connection saved. Introduction required.", "success");
+    setResult("#providerResult", "Connection saved. The model is active.", "success");
     renderSetup();
   } catch (error) {
     setResult("#providerResult", error.message, "error");
@@ -296,16 +282,16 @@ $("#testConnection").addEventListener("click", async () => {
 $("#settingsProvider").addEventListener("change", updateSettingsProviderFields);
 $("#settingsProviderForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  setResult("#settingsProviderResult", "Saving model connection…");
+  setResult("#settingsProviderResult", "Switching model…");
   try {
     await submitJson("/api/v1/onboarding/provider", formPayload(event.currentTarget));
-    setResult(
-      "#settingsProviderResult",
-      "Connection saved. Approve the model handoff below.",
-      "success",
-    );
+    const binding = onboarding.entity?.model_binding || {};
+    $("#runtimeModel").textContent =
+      `${binding.provider || "provider"} / ${binding.model || "model"}`;
+    $("#systemLineage").textContent =
+      `${onboarding.entity.lifecycle.current_mode} · ${binding.provider || "unbound"} / ${binding.model || "unbound"}`;
+    setResult("#settingsProviderResult", "Model switched. You can talk immediately.", "success");
     renderSettingsModel();
-    refreshHealth();
   } catch (error) {
     setResult("#settingsProviderResult", error.message, "error");
   }
@@ -318,26 +304,6 @@ $("#settingsTestConnection").addEventListener("click", async () => {
     setResult("#settingsProviderResult", result.message, "success");
   } catch (error) {
     setResult("#settingsProviderResult", error.message, "error");
-  }
-});
-
-$("#approveSettingsTransition").addEventListener("click", async () => {
-  setResult("#settingsTransitionResult", "Recording model handoff…");
-  try {
-    await submitJson("/api/v1/onboarding/transition", {
-      mode: $("#settingsTransitionMode").value,
-      display_name: onboarding.profile.agent_name,
-    });
-    const binding = onboarding.entity.model_binding || {};
-    $("#runtimeModel").textContent =
-      `${binding.provider || "provider"} / ${binding.model || "model"}`;
-    $("#systemLineage").textContent =
-      `${onboarding.entity.lifecycle.current_mode} · ${binding.provider || "unbound"} / ${binding.model || "unbound"}`;
-    setResult("#settingsTransitionResult", "Model handoff approved.", "success");
-    renderSettingsModel();
-    refreshHealth();
-  } catch (error) {
-    setResult("#settingsTransitionResult", error.message, "error");
   }
 });
 
@@ -485,6 +451,7 @@ async function beginFirstAwakening() {
   if (!onboarding?.awakening?.required || awakeningStarted) return;
   awakeningStarted = true;
   $("#resumeAwakening").hidden = true;
+  $("#stopAwakening").hidden = false;
   const assistant = append("assistant", "");
   setConversationBusy(true);
   $("#welcomeText").hidden = false;
@@ -565,11 +532,29 @@ async function beginFirstAwakening() {
       "First awakening paused. Press Resume Awakening to continue from the verified ledger.",
     );
   } finally {
+    $("#stopAwakening").hidden = true;
     setPresence("ready", "Ready");
     setConversationBusy(false);
     ui.input.focus();
   }
 }
+
+$("#stopAwakening").addEventListener("click", async () => {
+  $("#stopAwakening").disabled = true;
+  try {
+    await api("/api/v1/awaken/stop", { method: "POST", body: "{}" });
+    setAwakeningPaused(
+      Number(onboarding.awakening.checked || 0),
+      Number(onboarding.awakening.total || 0),
+      "First awakening stopped. You can talk now or resume it whenever you want.",
+    );
+  } catch (error) {
+    $("#welcomeText").hidden = false;
+    $("#welcomeText").textContent = `Awakening could not be stopped: ${error.message}`;
+  } finally {
+    $("#stopAwakening").disabled = false;
+  }
+});
 
 $("#resumeAwakening").addEventListener("click", () => {
   beginFirstAwakening().catch((error) => {
